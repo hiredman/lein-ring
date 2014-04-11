@@ -111,19 +111,6 @@ The following options affect the behavior of the web server started by
   open up an nREPL server on the given port. `:start?` defaults to false, 
   `:port` defaults to an arbitrary free port.
 
-TODO get rid of this
-## Executable jar files
-
-Lein-Ring can generate executable jar files for deployment purposes:
-
-    lein ring uberjar
-
-This generates a jar file with all dependencies. You can then copy the
-file to your web server and execute it with:
-
-    java -jar <project>-<version>-standalone.jar
-
-
 ## War files
 
 ### Compiling

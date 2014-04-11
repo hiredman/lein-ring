@@ -8,6 +8,5 @@
   "Create an executable $PROJECT-$VERSION.jar file with dependencies."
   [project]
   (ensure-handler-set! project)
-  (let [project (-> project add-server-dep jar/add-main-class)]
-    (jar/compile-main project)
+  (let [project (-> project add-server-dep)]
     (leiningen.uberjar/uberjar project)))
