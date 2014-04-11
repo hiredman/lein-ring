@@ -3,15 +3,15 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [leinjacker.utils :as lju]
-            [leinjacker.deps :as deps])
-  (:use [clojure.data.xml :only [sexp-as-element indent-str]]
-        leiningen.ring.util)
-  (:import [java.util.jar Manifest
+            [leinjacker.deps :as deps]
+            [clojure.data.xml :refer [sexp-as-element indent-str]]
+            [leiningen.ring.util :refer :all])
+  (:import (java.util.jar Manifest
                           JarEntry
-                          JarOutputStream]
-           [java.io BufferedOutputStream 
-                    FileOutputStream 
-                    ByteArrayInputStream]))
+                          JarOutputStream)
+           (java.io BufferedOutputStream
+                    FileOutputStream
+                    ByteArrayInputStream)))
 
 (defn default-war-name [project]
   (or (get-in project [:ring :war-name])
@@ -97,61 +97,41 @@
       "/*"))
 
 (defn make-web-xml [project]
-  (let [ring-options (:ring project)]
+  (let [ring-options (:ring project)
+        handler-sym (get-in project [:ring :handler])
+        handler-ns  (name (namespace handler-sym))
+        handler-name (name handler-sym)
+        init-sym    (get-in project [:ring :init])
+        destroy-sym (get-in project [:ring :destroy])
+        init-ns     (name (namespace init-sym))
+        init-name     (name init-sym)]
     (if (contains? ring-options :web-xml)
       (slurp (:web-xml ring-options))
       (indent-str
-        (sexp-as-element
-          [:web-app
-           (if (has-listener? project)
-             [:listener
-              [:listener-class (listener-class project)]])
-           [:servlet
-            [:servlet-name  (servlet-name project)]
-            [:servlet-class (servlet-class project)]]
-           [:servlet-mapping
-            [:servlet-name (servlet-name project)]
-            [:url-pattern (url-pattern project)]]])))))
-
-(defn generate-handler [project handler-sym]
-  (if (get-in project [:ring :servlet-path-info?] true)
-    `(fn [request#]
-       (let [context# ^String (.getContextPath (:servlet-request request#))]
-         (~handler-sym
-          (assoc request#
-            :context context#
-            :path-info (subs (:uri request#) (.length context#))))))
-    handler-sym))
-
-(defn compile-servlet [project]
-  (let [handler-sym (get-in project [:ring :handler])
-        handler-ns  (symbol (namespace handler-sym))
-        servlet-ns  (symbol (servlet-ns project))]
-    (compile-form project servlet-ns
-      `(do (ns ~servlet-ns
-             (:require ring.util.servlet ~handler-ns)
-             (:gen-class :extends javax.servlet.http.HttpServlet))
-           (ring.util.servlet/defservice
-             ~(generate-handler project handler-sym))))))
-
-(defn compile-listener [project]
-  (let [init-sym    (get-in project [:ring :init])
-        destroy-sym (get-in project [:ring :destroy])
-        init-ns     (and init-sym    (symbol (namespace init-sym)))
-        destroy-ns  (and destroy-sym (symbol (namespace destroy-sym)))
-        project-ns  (symbol (listener-ns project))]
-    (compile-form project project-ns
-      `(do (ns ~project-ns
-             (:require ~@(set (remove nil? [init-ns destroy-ns])))
-             (:gen-class :implements [javax.servlet.ServletContextListener]))
-           ~(let [servlet-context-event (gensym)]
-              `(do
-                 (defn ~'-contextInitialized [this# ~servlet-context-event]
-                   ~(if init-sym
-                      `(~init-sym)))
-                 (defn ~'-contextDestroyed [this# ~servlet-context-event]
-                   ~(if destroy-sym
-                      `(~destroy-sym)))))))))
+       (sexp-as-element
+        [:web-app
+         ;; (if (has-listener? project)
+         ;;   [:listener
+         ;;    [:listener-class (listener-class project)]])
+         [:servlet
+          [:servlet-name  (servlet-name project)]
+          [:servlet-class "com.thelastcitadel.Servlet"]
+          [:init-param
+           [:param-name "ns-name"]
+           [:param-value handler-ns]]
+          [:init-param
+           [:param-name "handler-name"]
+           [:param-value handler-name]]
+          [:init-param
+           [:param-name "init-ns-name"]
+           [:param-value init-ns]]
+          [:init-param
+           [:param-name "init-name"]
+           [:param-value init-name]]
+          [:load-on-startup 0]]
+         [:servlet-mapping
+          [:servlet-name (servlet-name project)]
+          [:url-pattern (url-pattern project)]]])))))
 
 (defn create-war [project file-path]
   (-> (FileOutputStream. file-path)
@@ -184,7 +164,7 @@
 
 (defn war-resources-paths [project]
   (filter identity
-    (distinct (concat [(:war-resources-path project "war-resources")] (:war-resource-paths project)))))
+          (distinct (concat [(:war-resources-path project "war-resources")] (:war-resource-paths project)))))
 
 (defn write-war [project war-path]
   (with-open [war-stream (create-war project war-path)]
@@ -204,7 +184,7 @@
                            (lju/try-resolve 'leiningen.core.project/unmerge-profiles))]
     (unmerge-fn project [:default])
     project))
-        
+
 (defn add-servlet-dep [project]
   (-> project
       (deps/add-if-missing '[ring/ring-servlet "1.2.1"])
@@ -216,15 +196,15 @@
      (war project (default-war-name project)))
   ([project war-name]
      (ensure-handler-set! project)
-      (let [project (-> project
-                        unmerge-profiles
-                        add-servlet-dep)
+     (let [project (-> project
+                       unmerge-profiles
+                       add-servlet-dep)
            result  (compile/compile project)]
        (when-not (and (number? result) (pos? result))
          (let [war-path (war-file-path project war-name)]
-           (compile-servlet project)
-           (if (has-listener? project)
-             (compile-listener project))
+           ;; (compile-servlet project)
+           ;; (if (has-listener? project)
+           ;;   (compile-listener project))
            (write-war project war-path)
            (println "Created" war-path)
            war-path)))))

@@ -7,7 +7,7 @@ It provides commands to start a development web server, and to turn a
 Ring handler into a standard war file.
 
 [1]: https://github.com/technomancy/leiningen
-[2]: https://github.com/mmcgrana/ring 
+[2]: https://github.com/ring-clojure/ring 
 
 
 ## Install
@@ -15,11 +15,7 @@ Ring handler into a standard war file.
 To use Lein-Ring, add it as a plugin to your `project.clj` file or
 your global profile:
 
-    :plugins [[lein-ring "0.8.10"]]
-
-Or, if you are using a version of Leiningen prior to 1.7.0:
-
-    :dev-dependencies [[lein-ring "0.8.10"]]
+    :plugins [[com.thelastcitadel/lein-ring "0.0.1"]]
 
 Then add a new `:ring` key to your `project.clj` file that contains a
 map of configuration options. At minimum there must be a `:handler`
@@ -40,13 +36,13 @@ your `project.clj` file:
   war-file, this function will be called when your handler servlet is
   first initialized.
 
-* `:destroy` -
+* TODO `:destroy` -
   A function called before your handler exits or is unloaded. It
   should take no arguments. If your Ring application has been compiled
   into a war-file, then this will be called when your hander servlet
   is destroyed.
 
-* `:adapter` -
+* TODO `:adapter` -
   A map of options to be passed to the Ring adapter. This has no
   effect if you're deploying your application as a war-file.
 
@@ -69,6 +65,7 @@ web browser to the root page:
 
     lein ring server
 
+TODO: get rid of this nonsense
 If the `LEIN_NO_DEV` environment variable is **not** set, the server
 will monitor your source directory for file modifications, and any
 altered files will automatically be reloaded.
@@ -114,6 +111,7 @@ The following options affect the behavior of the web server started by
   open up an nREPL server on the given port. `:start?` defaults to false, 
   `:port` defaults to an arbitrary free port.
 
+TODO get rid of this
 ## Executable jar files
 
 Lein-Ring can generate executable jar files for deployment purposes:
